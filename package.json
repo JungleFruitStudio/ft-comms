@@ -1,0 +1,6 @@
+{
+  "name": "ft-comms",
+  "private": true,
+  "description": "FT Comms — Foreign Tongues' people registry, segments, email and messages",
+  "engines": { "node": ">=18" }
+}

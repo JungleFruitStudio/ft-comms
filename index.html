@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FT Comms</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#f6f3ec">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta name="apple-mobile-web-app-title" content="FT Comms">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="/img/icon-32.png">
+<link rel="apple-touch-icon" href="/img/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div id="gate" class="gate" hidden>
+  <form class="gate-card" id="gateForm" autocomplete="on">
+    <img src="/img/logo.png" alt="" class="gate-logo">
+    <h1>FT <em>Comms</em></h1>
+    <p class="muted" id="gateLead">Sign in with your Foreign Tongues Social email and password.</p>
+    <label class="field" id="gEmailRow"><span>Email</span><input class="input" type="email" id="gEmail" autocomplete="username"></label>
+    <label class="field" id="gPwRow"><span>Password</span><input class="input" type="password" id="gPw" autocomplete="current-password"></label>
+    <button class="btn primary wide" id="gGo" type="submit">Sign in</button>
+    <p class="gate-links"><a href="#" id="gForgot">Forgot password</a></p>
+    <p class="gate-note" id="gNote" role="status"></p>
+  </form>
+</div>
+
+<div id="app" class="app" hidden>
+  <header class="mbar">
+    <a class="brand" href="#/"><img src="/img/logo.png" alt="Foreign Tongues"><span>FT <em>Comms</em></span></a>
+    <button class="mbar-btn" id="mMenu" aria-label="Menu"><span></span><span></span><span></span></button>
+  </header>
+  <div class="scrim" id="scrim"></div>
+  <aside class="side" id="side">
+    <a class="brand" href="#/"><img src="/img/logo.png" alt="Foreign Tongues"><span>FT <em>Comms</em></span></a>
+    <div class="build" id="build"></div>
+    <nav class="nav" id="nav">
+      <a href="#/" data-r="people"><i data-ic="people"></i>People</a>
+      <a href="#/orgs" data-r="orgs"><i data-ic="orgs"></i>Organizations</a>
+      <a href="#/segments" data-r="segments"><i data-ic="segments"></i>Segments</a>
+      <a href="#/email" data-r="email"><i data-ic="email"></i>Email</a>
+      <a href="#/messages" data-r="messages"><i data-ic="messages"></i>Messages</a>
+      <a href="#/import" data-r="import"><i data-ic="import"></i>Import</a>
+      <a href="#/settings" data-r="settings"><i data-ic="settings"></i>Settings</a>
+    </nav>
+    <div class="me">
+      <div class="me-name" id="meName"></div>
+      <div class="me-role" id="meRole"></div>
+      <div class="me-foot"><button class="link" id="signOut">Sign out</button><span class="save-note" id="saveNote"></span></div>
+    </div>
+  </aside>
+  <main class="main" id="main"></main>
+  <nav class="tabbar" id="tabbar">
+    <a href="#/" data-r="people"><i data-ic="people"></i><span>People</span></a>
+    <a href="#/segments" data-r="segments"><i data-ic="segments"></i><span>Segments</span></a>
+    <a href="#/email" data-r="email"><i data-ic="email"></i><span>Email</span></a>
+    <a href="#/messages" data-r="messages"><i data-ic="messages"></i><span>Messages</span></a>
+  </nav>
+</div>
+<div id="toasts" class="toasts" aria-live="polite"></div>
+
+<script src="/js/vendor/supabase-2.117.2.js"></script>
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
