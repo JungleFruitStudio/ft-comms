@@ -89,6 +89,7 @@ textarea.input { resize: vertical; line-height: 1.5; }
 .nav a:hover { background: var(--hover); }
 .nav a.on { background: var(--paper); box-shadow: 0 0 0 1px var(--line); }
 .nav a.on i { color: var(--accent); }
+.nav-sep { border: 0; border-top: 1px solid var(--line); margin: 8px 10px; flex: none; }
 .nav-h { font-size: 11px; font-weight: 600; color: var(--faint); text-transform: uppercase; letter-spacing: .08em; padding: 16px 10px 5px; }
 body:not(.admin) .admin-only { display: none !important; }
 .me { border-top: 1px solid var(--line); padding: 14px 10px 0; font-size: 13px; }

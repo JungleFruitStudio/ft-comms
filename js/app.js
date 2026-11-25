@@ -72,7 +72,7 @@ const PAGES = [
   [/^email$/, 'email', () => emailPage(main)],
   [/^email\/([\w-]+)$/, 'email', m => composePage(main, m[1])],
   [/^messages$/, 'messages', () => messagesPage(main)],
-  [/^import$/, 'import', () => importPage(main)],
+  [/^import$/, 'people', () => importPage(main)],
   [/^settings$/, 'settings', () => settingsPage(main)],
 ];
 export async function route() {
