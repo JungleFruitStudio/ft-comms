@@ -24,6 +24,10 @@ sign-in, the same look.
   (`ftc_sync_event`, run by a trigger on `fte_events`; links in `ftc_event_links`, read through the view
   `ftc_event_people`). People are matched by email, then phone, then name; nothing in FT Events is changed. A segment
   can pick an event's guests or team (`rules.event`), and Email offers them directly under "To".
+- **Shopify**: customers and orders flow in every 15 minutes (`api/shopify.js`, started by the database timer
+  `ftc-shopify`; `ftc_shopify_ingest` matches people by Shopify id, then email, then phone). Shopify stays the source
+  of truth for orders; FT Comms for people. The only thing written to Shopify is an unsubscribe. Env:
+  `SHOPIFY_CLIENT_ID`, `SHOPIFY_CLIENT_SECRET`, `SHOPIFY_SHOP`.
 - **Texts**: not connected yet. The plan is a small helper on one Mac that copies conversations with people in the
   registry into `ftc_timeline` (`text_in` / `text_out`), matched by phone number. Until then texts are logged by hand.
 - **Code**: plain JavaScript modules, no build step. `js/app.js` (sign-in, pages), `js/db.js` (database),

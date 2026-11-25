@@ -113,11 +113,24 @@ export async function settingsPage(main) {
         <label class="field"><span>From address</span><input class="input" id="fe" type="email" value="${esc(s.from_email || '')}" placeholder="hello@yourdomain.com" ${admin ? '' : 'disabled'}></label></div>
       <label class="field"><span>Replies go to</span><input class="input" id="rt" type="email" value="${esc(s.reply_to || '')}" placeholder="Leave empty to use the from address" ${admin ? '' : 'disabled'}></label>
       <label class="field"><span>Postal address (shown at the bottom of marketing emails; US law requires one)</span><input class="input" id="ad" value="${esc(s.address || '')}" placeholder="Foreign Tongues, street, city, state, ZIP" ${admin ? '' : 'disabled'}></label>
-      ${admin ? '<div class="row end"><button class="btn primary" id="go">Save</button></div>' : ''}</div></div>`;
+      ${admin ? '<div class="row end"><button class="btn primary" id="go">Save</button></div>' : ''}</div></div>
+    <div class="panel"><div class="row between"><h3>Shopify</h3>${admin ? '<button class="btn small" id="sync" hidden>Sync now</button>' : ''}</div>
+      <p class="muted" id="shop">Checking Shopify</p>
+      <p class="small muted">Customers become people here and their orders land on their timelines, every 15 minutes. Someone who unsubscribes here is unsubscribed in Shopify too; nothing else is changed there.</p></div>`;
   if (admin) $('#go', main).onclick = async () => { const v = { from_name: $('#fn', main).value.trim(), from_email: M.normEmail($('#fe', main).value), reply_to: M.normEmail($('#rt', main).value), address: $('#ad', main).value.trim() };
     if (v.from_email && !M.okEmail(v.from_email)) return toast('The from address doesn’t look right.', 'error');
     try { await saveSetting('sender', v); toast('Saved.'); } catch (er) { toast('Couldn’t save: ' + er.message, 'error'); } };
   try { const st = await api('send'); const n = $('#status', main); if (!n) return;
     n.innerHTML = st.ready ? 'The email service (Resend) is connected.' + (s.from_email ? '' : ' Add a from address below to start sending.') : 'The email service isn’t connected yet. Add a Resend API key to the ft-comms project in Vercel, named <strong>RESEND_API_KEY</strong>, and verify the sending domain in Resend.'; }
   catch (er) { const n = $('#status', main); if (n) n.textContent = 'Couldn’t reach the email service check: ' + er.message; }
+  const shop = async () => { const n = $('#shop', main); if (!n) return;
+    try { const st = await api('shopify'), r = st.last_result;
+      n.textContent = !st.ready ? `Not connected yet. Add SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET to the ft-comms project in Vercel (an app installed on ${st.shop}).`
+        : st.last_error ? `Connected to ${st.shop}, but the last run stopped: ${st.last_error}`
+        : st.last_run ? `Connected to ${st.shop}. Last ran ${M.when(st.last_run)}: ${r ? `${r.customers} customers and ${r.orders} orders read, ${r.new_people} new people.` : ''}` : `Connected to ${st.shop}. It hasn’t run yet.`;
+      const b = $('#sync', main); if (b) b.hidden = !st.ready; } catch (er) { n.textContent = 'Couldn’t check Shopify: ' + er.message; } };
+  shop();
+  const sb_ = $('#sync', main); if (sb_) sb_.onclick = async () => { sb_.disabled = true; sb_.textContent = 'Syncing';
+    try { const r = await api('shopify', {}); toast(r.ready === false ? 'Shopify isn’t connected yet.' : `Read ${r.customers} customers and ${r.orders} orders.`); } catch (er) { toast(er.message, 'error'); }
+    sb_.disabled = false; sb_.textContent = 'Sync now'; shop(); };
 }
