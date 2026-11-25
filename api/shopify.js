@@ -68,7 +68,8 @@ module.exports = async (req, res) => {
     if (req.method === 'GET') { let st = {}; try { st = await call('ftc_shopify_state', {}); } catch (e) {} return send(res, 200, { ready, shop: SHOP, last_run: st.last_run || null, last_result: st.last_result || null, last_error: st.last_error || null }); }
     if (req.method !== 'POST') return send(res, 405, { error: 'Not allowed.' });
     if (who && who.role !== 'admin') return send(res, 403, { error: 'Only admins can run the Shopify feed.' });
-    if (!ready) return send(res, 200, { ready: false, note: 'Shopify isn’t connected yet.' });
+    // (which Shopify variables this deployment can see, by name only: enough to tell a missing link from a misspelt name)
+    if (!ready) return send(res, 200, { ready: false, note: 'Shopify isn’t connected yet.', names_seen: Object.keys(process.env).filter(k => /shopify/i.test(k)).sort(), environment: process.env.VERCEL_ENV || '' });
     const started = Date.now(), left = () => BUDGET_MS - (Date.now() - started), st = await call('ftc_shopify_state', {}), total = { customers: 0, orders: 0, new_people: 0, unsubscribed: 0 };
     let since = { customers: st.customers_since || START, orders: st.orders_since || START }, error = '';
     try {
