@@ -79,8 +79,8 @@ module.exports = async (req, res) => {
           more = page.pageInfo.hasNextPage; after = page.pageInfo.endCursor;
           if (!rows.length) break;
           const upto = rows[rows.length - 1].updated_at;
-          // (only move the bookmark when the whole list has been read, or a later page could be skipped: changes that share one timestamp)
-          const r = await call('ftc_shopify_ingest', { customers: kind === 'customers' ? rows : [], orders: kind === 'orders' ? rows : [], state: more ? {} : { [kind + '_since']: upto } });
+          // the bookmark moves with every page; the next run starts at that moment again (>=), so changes sharing a timestamp aren't skipped, and reading one twice changes nothing
+          const r = await call('ftc_shopify_ingest', { customers: kind === 'customers' ? rows : [], orders: kind === 'orders' ? rows : [], state: { [kind + '_since']: upto } });
           total.customers += r.customers || 0; total.orders += r.orders || 0; total.new_people += r.new_people || 0;
         }
       }
