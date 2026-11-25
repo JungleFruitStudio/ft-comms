@@ -1,8 +1,8 @@
 // What FT Comms knows about its own data, with no page or database in it: names, tidy emails and phone numbers,
 // which people a segment's rules pick, reading a spreadsheet file, and turning an email's text into a page.
-export const ROLES = ['customer', 'event guest', 'boutique owner', 'buyer', 'manufacturer', 'consultant', 'press', 'team'];
+export const ROLES = ['customer', 'event guest', 'boutique owner', 'boutique staff', 'buyer', 'manufacturer', 'consultant', 'press', 'team'];
 export const ORG_KINDS = [['boutique', 'Boutique'], ['manufacturer', 'Manufacturer'], ['consultancy', 'Consultancy'], ['press', 'Press'], ['venue', 'Venue'], ['other', 'Other']];
-export const KINDS = { note: 'Note', email_out: 'Email sent', email_in: 'Email received', text_out: 'Text sent', text_in: 'Text received', call: 'Call', event: 'Event', order: 'Order' };
+export const KINDS = { note: 'Note', email_out: 'Email sent', email_in: 'Email received', text_out: 'Text sent', text_in: 'Text received', call: 'Call', meeting: 'Met in person', event: 'Event', order: 'Order' };
 
 export const fullName = p => [p.first_name, p.last_name].filter(Boolean).join(' ').trim() || (p.emails && p.emails[0]) || (p.phones && fmtPhone(p.phones[0])) || 'No name';
 export const normEmail = s => String(s || '').trim().toLowerCase();

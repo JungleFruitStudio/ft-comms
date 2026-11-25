@@ -9,9 +9,10 @@ sign-in, the same look.
 - **Database**: the `ftc_*` tables in Foreign Tongues' own Supabase project (`ctmvkumkqlspyenbnnkn`; from Claude,
   use the "FT Supabase" connector, never the Jungle Fruit one). Set up by the migration `ft_comms_setup`.
   - `ftc_people` (names, `emails[]`, `phones[]`, `tags[]`, marketing consent, `last_contact_at`), `ftc_orgs`,
-    `ftc_timeline` (everything that happened with a person: notes, emails, texts, calls), `ftc_segments` (saved
+    `ftc_timeline` (everything that happened with a person: notes, emails, texts, calls, meetings, orders; an order's full detail is in `meta`), `ftc_segments` (saved
     filters; `rules` is read by `js/model.js` `matches`), `ftc_emails` (drafts and sent), `ftc_settings` (sender),
     `ftc_private` (the unsubscribe secret; nobody can read it through the API).
+  - `ftc_people.ext` keeps what came with a person from another system as it was exported (`ext.squarespace`).
   - Phone numbers are stored as `+` and digits (ten digits are taken as US), emails lowercased.
   - The hourly FT backup takes these tables too (`ftb_tables()` matches `ftc_`).
 - **Email**: sent through Resend by `api/send.js` (env `RESEND_API_KEY` on this Vercel project; the from address

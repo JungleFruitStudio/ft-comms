@@ -22,8 +22,9 @@ function editOrg(main, o) {
     <label class="field"><span>Name</span><input class="input" id="n" value="${esc(o ? o.name : '')}"></label>
     <div class="grid2"><label class="field"><span>Kind</span><select class="input" id="k">${M.ORG_KINDS.map(k => `<option value="${k[0]}" ${o && o.kind === k[0] ? 'selected' : ''}>${k[1]}</option>`).join('')}</select></label>
       <label class="field"><span>City</span><input class="input" id="c" value="${esc(o ? o.city : '')}"></label></div>
+    <label class="field"><span>Address</span><input class="input" id="a" value="${esc(o ? o.address || '' : '')}"></label>
     <label class="field"><span>Website</span><input class="input" id="w" value="${esc(o ? o.website : '')}"></label>
-    <label class="field"><span>Notes</span><textarea class="input" id="t" rows="3">${esc(o ? o.notes : '')}</textarea></label>
+    <label class="field"><span>Notes</span><textarea class="input" id="t" rows="8">${esc(o ? o.notes : '')}</textarea></label>
     ${o ? `<div class="field"><span>People here</span><div>${people.length ? people.map(p => `<a class="chip grey" href="#/p/${p.id}" data-go>${esc(M.fullName(p))}</a>`).join(' ') : '<span class="muted small">Nobody linked yet.</span>'} <button class="link small" id="np">Add a person here</button></div></div>` : ''}
     <div class="row between">${o ? `<button class="btn danger" id="del">Delete</button>` : '<span></span>'}<button class="btn primary" id="go">${o ? 'Save' : 'Add'}</button></div></div>`);
   if (!o) setTimeout(() => $('#n', m.el).focus(), 30);
@@ -31,7 +32,7 @@ function editOrg(main, o) {
   if (o) { $('#np', m.el).onclick = () => { m.close(); newPerson(o.id); };
     $('#del', m.el).onclick = async () => { if (!await confirmBox(`Delete ${o.name}? Its people stay in the registry, without an organization.`, 'Delete', true)) return;
       try { await remove('orgs', o.id); for (const p of state.people) if (p.org_id === o.id) p.org_id = null; m.close(); orgsPage(main); } catch (er) { toast('Couldn’t delete: ' + er.message, 'error'); } }; }
-  $('#go', m.el).onclick = async () => { const row = { name: $('#n', m.el).value.trim(), kind: $('#k', m.el).value, city: $('#c', m.el).value.trim(), website: $('#w', m.el).value.trim(), notes: $('#t', m.el).value.trim() };
+  $('#go', m.el).onclick = async () => { const row = { name: $('#n', m.el).value.trim(), kind: $('#k', m.el).value, city: $('#c', m.el).value.trim(), address: $('#a', m.el).value.trim(), website: $('#w', m.el).value.trim(), notes: $('#t', m.el).value.trim() };
     if (!row.name) return toast('Give it a name.', 'error');
     try { o ? await update('orgs', o.id, row) : await create('orgs', row); m.close(); orgsPage(main); } catch (er) { toast('Couldn’t save: ' + er.message, 'error'); } };
 }

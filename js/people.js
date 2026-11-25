@@ -103,6 +103,15 @@ export function newPerson(orgId) {
   $('#go', m.el).onclick = go; m.el.onkeydown = e => { if (e.key === 'Enter' && e.target.tagName === 'INPUT') go(); };
 }
 
+/* what came with a person from another system (kept as it was exported), as a small panel */
+function came(p) {
+  const s = p.ext && p.ext.squarespace; if (!s) return '';
+  const day = v => v ? new Date(v).toLocaleDateString([], { year: 'numeric', month: 'short', day: 'numeric' }) : '';
+  const rows = [['Added there', day(s.created_on)], ['Email subscriber since', day(s.email_subscriber_since)], ['How they subscribed', s.email_subscriber_source], ['Mailing lists', (s.mailing_lists || []).join(', ')],
+    ['Orders', s.orders ? `${s.orders}, $${Number(s.total).toFixed(2)} in total` : ''], ['Had a store account', s.has_account ? 'Yes' : '']].filter(r => r[1]);
+  return rows.length ? `<div class="panel"><h3>From Squarespace</h3><table class="table"><tbody>${rows.map(r => `<tr><td class="when">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join('')}</tbody></table></div>` : '';
+}
+
 /* ---------------- one person ---------------- */
 export async function personPage(main, id) {
   const p = person(id);
@@ -121,6 +130,7 @@ export async function personPage(main, id) {
           <label class="field"><span>Emails</span><input class="input" id="emails" value="${esc((p.emails || []).join(', '))}" placeholder="Separate several with commas"></label>
           <label class="field"><span>Phone numbers</span><input class="input" id="phones" value="${esc((p.phones || []).map(M.fmtPhone).join(', '))}" placeholder="Separate several with commas"></label>
           <label class="field"><span>City</span><input class="input" data-f="city" value="${esc(p.city)}"></label>
+          <label class="field"><span>Address</span><textarea class="input" data-f="address" rows="3" style="min-height:0">${esc(p.address || '')}</textarea></label>
           <div class="field"><span>Tags</span><div id="tags"></div></div>
           <label class="field"><span>Notes</span><textarea class="input" data-f="notes" rows="3">${esc(p.notes)}</textarea></label>
         </div></div>
@@ -128,8 +138,9 @@ export async function personPage(main, id) {
           <div class="stack"><label class="check"><input type="checkbox" id="eok" ${p.email_ok && !p.unsubscribed_at ? 'checked' : ''}>Agreed to marketing email</label>
           <label class="check"><input type="checkbox" id="sok" ${p.sms_ok ? 'checked' : ''}>Agreed to marketing texts</label>
           <span class="small muted" id="cnote"></span></div></div>
+        ${came(p)}
       </div>
-      <div class="panel"><div class="row between"><h3>Timeline</h3><span class="row"><button class="btn small" data-add="note">Add a note</button><button class="btn small" data-add="call">Log a call</button><button class="btn small" data-add="text_out">Log a text</button></span></div><div class="tl" id="tl"><p class="muted small">Loading</p></div></div>
+      <div class="panel"><div class="row between"><h3>Timeline</h3><span class="row"><button class="btn small" data-add="note">Add a note</button><button class="btn small" data-add="call">Log a call</button><button class="btn small" data-add="meeting">Log a meeting</button><button class="btn small" data-add="text_out">Log a text</button></span></div><div class="tl" id="tl"><p class="muted small">Loading</p></div></div>
     </div>`;
   const head = () => { const q = person(id), o = org(q.org_id); $('#nm', main).textContent = M.fullName(q);
     $('#sub', main).textContent = [q.title, o && o.name, q.city, 'Last contact: ' + M.ago(q.last_contact_at).toLowerCase(), q.source !== 'manual' ? 'Source: ' + q.source : ''].filter(Boolean).join(' · ');
@@ -163,7 +174,7 @@ export async function personPage(main, id) {
   tl.onclick = async e => { const b = e.target.closest('[data-rm]'); if (!b) return; if (!await confirmBox('Remove this entry from the timeline?', 'Remove', true)) return;
     try { await removeEntry(+b.dataset.rm); drawTl(); } catch (er) { toast('Couldn’t remove it: ' + er.message, 'error'); } };
   $$('[data-add]', main).forEach(b => b.onclick = () => {
-    const kind = b.dataset.add, label = { note: 'Add a note', call: 'Log a call', text_out: 'Log a text' }[kind];
+    const kind = b.dataset.add, label = { note: 'Add a note', call: 'Log a call', meeting: 'Log a meeting', text_out: 'Log a text' }[kind];
     const m = modal(`<h3>${label}</h3><div class="stack">${kind === 'text_out' ? `<div class="seg" id="dir"><button class="on" data-k="text_out">I sent it</button><button data-k="text_in">They sent it</button></div>` : ''}
       <label class="field"><span>${kind === 'note' ? 'Note' : 'What was said'}</span><textarea class="input" id="body" rows="5"></textarea></label><div class="row end"><button class="btn primary" id="go">Save</button></div></div>`);
     let k = kind; setTimeout(() => $('#body', m.el).focus(), 30);
