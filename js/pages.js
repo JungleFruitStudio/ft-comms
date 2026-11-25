@@ -125,7 +125,7 @@ export async function settingsPage(main) {
   catch (er) { const n = $('#status', main); if (n) n.textContent = 'Couldn’t reach the email service check: ' + er.message; }
   const shop = async () => { const n = $('#shop', main); if (!n) return;
     try { const st = await api('shopify'), r = st.last_result;
-      n.textContent = !st.ready ? `Not connected yet. Add SHOPIFY_CLIENT_ID and SHOPIFY_CLIENT_SECRET to the ft-comms project in Vercel (an app installed on ${st.shop}).`
+      n.textContent = !st.ready ? `Not connected yet. Add FT_SHOPIFY_CLIENT_ID and FT_SHOPIFY_CLIENT_SECRET in Vercel and link them to the ft-comms project (an app installed on ${st.shop}).`
         : st.last_error ? `Connected to ${st.shop}, but the last run stopped: ${st.last_error}`
         : st.last_run ? `Connected to ${st.shop}. Last ran ${M.when(st.last_run)}: ${r ? `${r.customers} customers and ${r.orders} orders read, ${r.new_people} new people.` : ''}` : `Connected to ${st.shop}. It hasn’t run yet.`;
       const b = $('#sync', main); if (b) b.hidden = !st.ready; } catch (er) { n.textContent = 'Couldn’t check Shopify: ' + er.message; } };

@@ -6,12 +6,14 @@
 //       email, then phone) and remembers how far it got. Also tells Shopify about anyone who unsubscribed here.
 // GET   (signed in) says whether Shopify is connected and when the feed last ran.
 //
-// Env: SHOPIFY_CLIENT_ID, SHOPIFY_CLIENT_SECRET (an app made in Shopify's Dev Dashboard and installed on the store,
-// scopes read_customers, read_orders, write_customers), SHOPIFY_SHOP (the store's myshopify.com address).
+// Env: FT_SHOPIFY_CLIENT_ID, FT_SHOPIFY_CLIENT_SECRET (an app made in Shopify's Dev Dashboard and installed on the store,
+// scopes read_customers, read_orders, write_customers), FT_SHOPIFY_SHOP (the store's myshopify.com address; optional).
 // Nothing is ever changed in Shopify except a customer's email marketing consent, and only to "unsubscribed".
 const { person, rpc, send } = require('./_lib');
-const SHOP = process.env.SHOPIFY_SHOP || 'foreigntongues.myshopify.com', API = '2026-10';
-const ID = process.env.SHOPIFY_CLIENT_ID, SECRET = process.env.SHOPIFY_CLIENT_SECRET;
+// (the variables are shared across the FT projects in Vercel, where they carry an FT_ prefix; the plain names work too)
+const env = n => process.env['FT_SHOPIFY_' + n] || process.env['SHOPIFY_FT_' + n] || process.env['SHOPIFY_' + n] || '';
+const SHOP = (env('SHOP') || 'foreigntongues.myshopify.com').replace(/^https?:\/\//, '').replace(/\/.*$/, ''), API = '2026-10';
+const ID = env('CLIENT_ID'), SECRET = env('CLIENT_SECRET');
 const START = '2020-01-01T00:00:00Z', BUDGET_MS = 40e3;
 
 let token = '', tokenExp = 0;
