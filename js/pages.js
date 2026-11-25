@@ -1,40 +1,75 @@
 // The smaller pages: organizations, segments (saved filters), messages, and settings.
-import { state, org, segment, create, update, remove, recent, person, saveSetting, isAdmin, api } from './db.js';
-import { $, $$, esc, toast, modal, confirmBox } from './ui.js';
+import { state, org, segment, create, update, remove, recent, timelineOf, person, saveSetting, isAdmin, api } from './db.js';
+import { $, $$, esc, toast, confirmBox, promptBox } from './ui.js';
 import { tagBox, newPerson } from './people.js';
 import * as M from './model.js';
 
 const orgOf = id => org(id);
 
 /* ---------------- organizations ---------------- */
+const kindName = k => (M.ORG_KINDS.find(x => x[0] === k) || [])[1] || k;
 export function orgsPage(main) {
   const count = id => state.people.filter(p => p.org_id === id).length;
   main.innerHTML = `
-    <div class="head"><div><h1>Organizations</h1><p>Boutiques, manufacturers, consultancies and other businesses. People are linked to them from their own page.</p></div>
+    <div class="head"><div><h1>Organizations</h1><p>Boutiques, manufacturers, consultancies and other businesses. Open one to see its details, its people and what has happened with them.</p></div>
       <button class="btn primary" id="add"><i data-ic="make"></i>Add an organization</button></div>
-    ${state.orgs.length ? `<table class="table ptable"><thead><tr><th>Name</th><th>Kind</th><th class="opt">City</th><th class="opt">Website</th><th>People</th></tr></thead><tbody>${[...state.orgs].sort((a, b) => a.name.localeCompare(b.name)).map(o => `<tr data-id="${o.id}"><td class="name">${esc(o.name || 'No name')}</td><td><span class="chip type">${esc((M.ORG_KINDS.find(k => k[0] === o.kind) || [])[1] || o.kind)}</span></td><td class="opt">${esc(o.city)}</td><td class="opt">${esc(o.website)}</td><td>${count(o.id)}</td></tr>`).join('')}</tbody></table>` : `<div class="empty">No organizations yet.</div>`}`;
-  $('#add', main).onclick = () => editOrg(main, null);
-  const t = $('tbody', main); if (t) t.onclick = e => { const tr = e.target.closest('tr[data-id]'); if (tr) editOrg(main, org(tr.dataset.id)); };
+    ${state.orgs.length ? `<table class="table ptable"><thead><tr><th>Name</th><th>Kind</th><th class="opt">City</th><th class="opt">Website</th><th>People</th></tr></thead><tbody>${[...state.orgs].sort((a, b) => a.name.localeCompare(b.name)).map(o => `<tr data-id="${o.id}"><td class="name">${esc(o.name || 'No name')}</td><td><span class="chip type">${esc(kindName(o.kind))}</span></td><td class="opt">${esc(o.city)}</td><td class="opt">${esc(o.website)}</td><td>${count(o.id)}</td></tr>`).join('')}</tbody></table>` : `<div class="empty">No organizations yet.</div>`}`;
+  $('#add', main).onclick = async () => { const name = await promptBox('Name of the organization', { yes: 'Add' }); if (!name || !name.trim()) return;
+    try { const o = await create('orgs', { name: name.trim() }); location.hash = '#/o/' + o.id; } catch (er) { toast('Couldn’t add it: ' + er.message, 'error'); } };
+  const t = $('tbody', main); if (t) t.onclick = e => { const tr = e.target.closest('tr[data-id]'); if (tr) location.hash = '#/o/' + tr.dataset.id; };
 }
-function editOrg(main, o) {
-  const people = o ? state.people.filter(p => p.org_id === o.id) : [];
-  const m = modal(`<h3>${o ? 'Organization' : 'Add an organization'}</h3><div class="stack">
-    <label class="field"><span>Name</span><input class="input" id="n" value="${esc(o ? o.name : '')}"></label>
-    <div class="grid2"><label class="field"><span>Kind</span><select class="input" id="k">${M.ORG_KINDS.map(k => `<option value="${k[0]}" ${o && o.kind === k[0] ? 'selected' : ''}>${k[1]}</option>`).join('')}</select></label>
-      <label class="field"><span>City</span><input class="input" id="c" value="${esc(o ? o.city : '')}"></label></div>
-    <label class="field"><span>Address</span><input class="input" id="a" value="${esc(o ? o.address || '' : '')}"></label>
-    <label class="field"><span>Website</span><input class="input" id="w" value="${esc(o ? o.website : '')}"></label>
-    <label class="field"><span>Notes</span><textarea class="input" id="t" rows="8">${esc(o ? o.notes : '')}</textarea></label>
-    ${o ? `<div class="field"><span>People here</span><div>${people.length ? people.map(p => `<a class="chip grey" href="#/p/${p.id}" data-go>${esc(M.fullName(p))}</a>`).join(' ') : '<span class="muted small">Nobody linked yet.</span>'} <button class="link small" id="np">Add a person here</button></div></div>` : ''}
-    <div class="row between">${o ? `<button class="btn danger" id="del">Delete</button>` : '<span></span>'}<button class="btn primary" id="go">${o ? 'Save' : 'Add'}</button></div></div>`);
-  if (!o) setTimeout(() => $('#n', m.el).focus(), 30);
-  $$('[data-go]', m.el).forEach(a => a.onclick = () => m.close());
-  if (o) { $('#np', m.el).onclick = () => { m.close(); newPerson(o.id); };
-    $('#del', m.el).onclick = async () => { if (!await confirmBox(`Delete ${o.name}? Its people stay in the registry, without an organization.`, 'Delete', true)) return;
-      try { await remove('orgs', o.id); for (const p of state.people) if (p.org_id === o.id) p.org_id = null; m.close(); orgsPage(main); } catch (er) { toast('Couldn’t delete: ' + er.message, 'error'); } }; }
-  $('#go', m.el).onclick = async () => { const row = { name: $('#n', m.el).value.trim(), kind: $('#k', m.el).value, city: $('#c', m.el).value.trim(), address: $('#a', m.el).value.trim(), website: $('#w', m.el).value.trim(), notes: $('#t', m.el).value.trim() };
-    if (!row.name) return toast('Give it a name.', 'error');
-    try { o ? await update('orgs', o.id, row) : await create('orgs', row); m.close(); orgsPage(main); } catch (er) { toast('Couldn’t save: ' + er.message, 'error'); } };
+
+/* one organization: its details, the people there, and everything that has happened with any of them */
+export async function orgPage(main, id) {
+  const o = org(id);
+  if (!o) { main.innerHTML = `<a class="backlink" href="#/orgs"><i data-ic="back"></i>Organizations</a><div class="empty">This organization isn’t in the registry any more.</div>`; return; }
+  const here = () => state.people.filter(p => p.org_id === id).sort((a, b) => M.fullName(a).localeCompare(M.fullName(b)));
+  const site = v => /^https?:\/\//i.test(v) ? v : 'https://' + v;
+  main.innerHTML = `
+    <a class="backlink" href="#/orgs"><i data-ic="back"></i>Organizations</a>
+    <div class="head"><div class="grow"><h1 id="nm"></h1><p id="sub"></p></div>
+      <div class="row"><button class="btn" id="mail">Email the people here</button><button class="btn danger" id="del">Delete</button></div></div>
+    <div class="two-col even">
+      <div>
+        <div class="panel"><h3>Details</h3><div class="stack">
+          <label class="field"><span>Name</span><input class="input" data-f="name" value="${esc(o.name)}"></label>
+          <div class="grid2"><label class="field"><span>Kind</span><select class="input" data-f="kind">${M.ORG_KINDS.map(k => `<option value="${k[0]}" ${o.kind === k[0] ? 'selected' : ''}>${k[1]}</option>`).join('')}</select></label>
+            <label class="field"><span>City</span><input class="input" data-f="city" value="${esc(o.city)}"></label></div>
+          <label class="field"><span>Address</span><textarea class="input" data-f="address" rows="2" style="min-height:0">${esc(o.address || '')}</textarea></label>
+          <label class="field"><span>Website</span><input class="input" data-f="website" value="${esc(o.website)}"></label>
+          <div id="open"></div>
+          <label class="field"><span>Notes</span><textarea class="input" data-f="notes" rows="14">${esc(o.notes)}</textarea></label>
+        </div></div>
+      </div>
+      <div>
+        <div class="panel"><div class="row between"><h3>People here</h3><button class="btn small" id="np">Add a person here</button></div><div id="who"></div></div>
+        <div class="panel"><h3>What has happened</h3><div class="tl" id="tl"><p class="muted small">Loading</p></div></div>
+      </div>
+    </div>`;
+  const head = () => { const q = org(id), n = here().length; $('#nm', main).textContent = q.name || 'No name';
+    $('#sub', main).textContent = [kindName(q.kind), q.city, n + (n === 1 ? ' person' : ' people')].filter(Boolean).join(' · ');
+    $('#open', main).innerHTML = q.website ? `<a class="link small" href="${esc(site(q.website))}" target="_blank" rel="noopener">Open the website</a>` : ''; };
+  const who = () => { const l = here();
+    $('#who', main).innerHTML = l.length ? `<table class="table ptable"><tbody>${l.map(p => `<tr data-id="${p.id}"><td class="name">${esc(M.fullName(p))}${p.title ? `<div class="detail">${esc(p.title)}</div>` : ''}</td><td>${esc((p.emails || [])[0] || M.fmtPhone((p.phones || [])[0]))}</td><td class="when">${esc(M.ago(p.last_contact_at))}</td></tr>`).join('')}</tbody></table>` : `<p class="muted small">Nobody is linked to this organization yet. Add a person here, or pick it as the organization on a person’s page.</p>`; };
+  head(); who();
+  $$('[data-f]', main).forEach(inp => inp.onchange = async () => { const v = inp.value.trim();
+    if (inp.dataset.f === 'name' && !v) { inp.value = org(id).name; return toast('Give it a name.', 'error'); }
+    try { await update('orgs', id, { [inp.dataset.f]: v }); head(); } catch (er) { toast('Couldn’t save: ' + er.message, 'error'); } });
+  $('#who', main).onclick = e => { const tr = e.target.closest('tr[data-id]'); if (tr) location.hash = '#/p/' + tr.dataset.id; };
+  $('#np', main).onclick = () => newPerson(id);
+  $('#mail', main).onclick = async () => { const ids = here().filter(p => (p.emails || []).length).map(p => p.id);
+    if (!ids.length) return toast('Nobody here has an email address yet.', 'error');
+    try { const em = await create('emails', { kind: 'direct', to_ids: ids }); location.hash = '#/email/' + em.id; } catch (er) { toast('Couldn’t start the email: ' + er.message, 'error'); } };
+  $('#del', main).onclick = async () => { if (!await confirmBox(`Delete ${org(id).name}? Its people stay in the registry, without an organization.`, 'Delete', true)) return;
+    try { await remove('orgs', id); for (const p of state.people) if (p.org_id === id) p.org_id = null; location.hash = '#/orgs'; } catch (er) { toast('Couldn’t delete: ' + er.message, 'error'); } };
+
+  const tl = $('#tl', main), ids = here().map(p => p.id);
+  if (!ids.length) { tl.innerHTML = `<p class="muted small">Notes, calls, meetings, emails and orders of the people here will show up in this list.</p>`; return; }
+  let rows; try { rows = await timelineOf(ids); } catch (er) { if (tl.isConnected) tl.innerHTML = `<p class="muted small">Couldn’t load: ${esc(er.message)}</p>`; return; }
+  if (!tl.isConnected) return;
+  tl.innerHTML = rows.length ? rows.map(r => { const p = person(r.person_id);
+    return `<div class="tl-item"><div class="tl-when">${esc(M.when(r.at))}</div><div><span class="chip ${/_in$/.test(r.kind) ? 'blue' : /_out$/.test(r.kind) ? 'green' : r.kind === 'note' ? 'grey' : 'amber'}">${esc(M.KINDS[r.kind] || r.kind)}</span> <a href="#/p/${r.person_id}">${esc(p ? M.fullName(p) : 'Someone')}</a> <strong>${esc(r.summary)}</strong>${r.body ? `<div class="tl-body">${esc(r.body)}</div>` : ''}</div><span></span></div>`; }).join('')
+    : `<p class="muted small">Nothing yet. Add notes, calls and meetings from a person’s page.</p>`;
 }
 
 /* ---------------- segments ---------------- */

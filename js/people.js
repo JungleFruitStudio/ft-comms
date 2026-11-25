@@ -125,7 +125,7 @@ export async function personPage(main, id) {
       <div>
         <div class="panel"><h3>Details</h3><div class="stack">
           <div class="grid2"><label class="field"><span>First name</span><input class="input" data-f="first_name" value="${esc(p.first_name)}"></label><label class="field"><span>Last name</span><input class="input" data-f="last_name" value="${esc(p.last_name)}"></label></div>
-          <div class="grid2"><label class="field"><span>Organization</span><select class="input" id="org"><option value="">None</option>${state.orgs.map(o => `<option value="${o.id}" ${o.id === p.org_id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}<option value="+">New organization…</option></select></label>
+          <div class="grid2"><label class="field"><span>Organization</span><select class="input" id="org"><option value="">None</option>${state.orgs.map(o => `<option value="${o.id}" ${o.id === p.org_id ? 'selected' : ''}>${esc(o.name)}</option>`).join('')}<option value="+">New organization…</option></select><a class="link small" id="orgLink" hidden>Open its page</a></label>
             <label class="field"><span>Job title</span><input class="input" data-f="title" value="${esc(p.title)}"></label></div>
           <label class="field"><span>Emails</span><input class="input" id="emails" value="${esc((p.emails || []).join(', '))}" placeholder="Separate several with commas"></label>
           <label class="field"><span>Phone numbers</span><input class="input" id="phones" value="${esc((p.phones || []).map(M.fmtPhone).join(', '))}" placeholder="Separate several with commas"></label>
@@ -142,7 +142,7 @@ export async function personPage(main, id) {
       </div>
       <div class="panel"><div class="row between"><h3>Timeline</h3><span class="row"><button class="btn small" data-add="note">Add a note</button><button class="btn small" data-add="call">Log a call</button><button class="btn small" data-add="meeting">Log a meeting</button><button class="btn small" data-add="text_out">Log a text</button></span></div><div class="tl" id="tl"><p class="muted small">Loading</p></div></div>
     </div>`;
-  const head = () => { const q = person(id), o = org(q.org_id); $('#nm', main).textContent = M.fullName(q);
+  const head = () => { const q = person(id), o = org(q.org_id); $('#nm', main).textContent = M.fullName(q); const ol = $('#orgLink', main); ol.hidden = !o; if (o) ol.href = '#/o/' + o.id;
     $('#sub', main).textContent = [q.title, o && o.name, q.city, 'Last contact: ' + M.ago(q.last_contact_at).toLowerCase(), q.source !== 'manual' ? 'Source: ' + q.source : ''].filter(Boolean).join(' · ');
     $('#cnote', main).textContent = q.unsubscribed_at ? `Unsubscribed on ${new Date(q.unsubscribed_at).toLocaleDateString()}.` : q.email_ok && q.email_ok_at ? `Agreed to email on ${new Date(q.email_ok_at).toLocaleDateString()}.` : ''; };
   head();

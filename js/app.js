@@ -5,7 +5,7 @@ import { drawIcons } from './icons.js';
 import { BUILD } from './build.js';
 import { $, $$ } from './ui.js';
 import { peoplePage, personPage } from './people.js';
-import { orgsPage, segmentsPage, segmentPage, messagesPage, settingsPage } from './pages.js';
+import { orgsPage, orgPage, segmentsPage, segmentPage, messagesPage, settingsPage } from './pages.js';
 import { emailPage, composePage } from './email.js';
 import { importPage } from './importer.js';
 
@@ -66,6 +66,7 @@ const PAGES = [
   [/^$/, 'people', () => peoplePage(main)],
   [/^p\/([\w-]+)$/, 'people', m => personPage(main, m[1])],
   [/^orgs$/, 'orgs', () => orgsPage(main)],
+  [/^o\/([\w-]+)$/, 'orgs', m => orgPage(main, m[1])],
   [/^segments$/, 'segments', () => segmentsPage(main)],
   [/^segments\/([\w-]+)$/, 'segments', m => segmentPage(main, m[1])],
   [/^email$/, 'email', () => emailPage(main)],

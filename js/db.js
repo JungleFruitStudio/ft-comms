@@ -83,6 +83,11 @@ export async function timeline(personId) {
   const { data, error } = await sb.from('ftc_timeline').select('*').eq('person_id', personId).order('at', { ascending: false }).limit(500);
   if (error) fail(error); return data || [];
 }
+// the newest entries of several people together (an organization's page)
+export async function timelineOf(personIds, limit = 300) {
+  const { data, error } = await sb.from('ftc_timeline').select('*').in('person_id', personIds).order('at', { ascending: false }).limit(limit);
+  if (error) fail(error); return data || [];
+}
 // the newest entries of some kinds, across everyone (the Messages page)
 export async function recent(kinds, limit = 200) {
   const { data, error } = await sb.from('ftc_timeline').select('*').in('kind', kinds).order('at', { ascending: false }).limit(limit);
