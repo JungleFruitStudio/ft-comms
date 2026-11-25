@@ -32,9 +32,15 @@ export const ago = iso => { if (!iso) return 'Never'; const days = Math.floor((D
 /* ---------- segments ---------- */
 // rules: { any: [tags], all: [tags], none: [tags], orgKinds: [], reach: ''|'email'|'phone', consent: ''|'email'|'sms',
 //          source: '', quietDays: n (no contact for at least n days, or never), activeDays: n (contact within n days) }
-export const emptyRules = () => ({ any: [], all: [], none: [], orgKinds: [], reach: '', consent: '', source: '', quietDays: '', activeDays: '' });
+//          event: { id, as: ''|'guest'|'team', status: ''|'came'|'booked'|'noshow'|'cancel' } (on an FT Events event's guest list or team)
+export const emptyRules = () => ({ any: [], all: [], none: [], orgKinds: [], reach: '', consent: '', source: '', quietDays: '', activeDays: '', event: { id: '', as: '', status: '' } });
+// who was at which event, and what an event is called: handed in by the app (db.js knows; this file doesn't)
+let eventsOf = () => [], eventName = () => 'an event';
+export const useEvents = (of, name) => { eventsOf = of; eventName = name; };
 export function matches(p, rules, orgOf) {
   const r = { ...emptyRules(), ...(rules || {}) }, tags = p.tags || [];
+  const ev = r.event || {};
+  if (ev.id && !eventsOf(p.id).some(l => l.event_id === ev.id && (!ev.as || l.as_kind === ev.as) && (!ev.status || (l.as_kind === 'guest' && (l.status || 'booked') === ev.status)))) return false;
   if (r.any.length && !r.any.some(t => tags.includes(t))) return false;
   if (r.all.length && !r.all.every(t => tags.includes(t))) return false;
   if (r.none.length && r.none.some(t => tags.includes(t))) return false;
@@ -51,6 +57,8 @@ export function matches(p, rules, orgOf) {
 }
 export function describe(rules) {
   const r = { ...emptyRules(), ...(rules || {}) }, out = [];
+  const ev = r.event || {};
+  if (ev.id) out.push((ev.as === 'team' ? 'team of ' : ev.as === 'guest' ? ({ came: 'guests who came to ', noshow: 'no-shows at ', cancel: 'cancellations for ', booked: 'booked guests of ' }[ev.status] || 'guests of ') : 'everyone at ') + eventName(ev.id));
   if (r.any.length) out.push('tagged ' + r.any.join(' or '));
   if (r.all.length) out.push('with all of ' + r.all.join(', '));
   if (r.none.length) out.push('not ' + r.none.join(', '));

@@ -1,5 +1,6 @@
 // FT Comms: sign-in (the same accounts as Foreign Tongues Social), the sidebar, and which page is showing.
-import { sb, join, state, loadAll, listen, writes } from './db.js';
+import { sb, join, state, loadAll, loadEvents, eventsOf, eventById, listen, writes } from './db.js';
+import { useEvents } from './model.js';
 import { drawIcons } from './icons.js';
 import { BUILD } from './build.js';
 import { $, $$ } from './ui.js';
@@ -10,6 +11,7 @@ import { importPage } from './importer.js';
 
 const main = $('#main');
 drawIcons();
+useEvents(eventsOf, id => { const e = eventById(id); return e ? e.name : 'a deleted event'; });
 
 /* ---------------- sign-in ---------------- */
 let started = false, starting = false, mode = 'in';   // 'in' | 'reset' | 'newpw'
@@ -72,8 +74,9 @@ const PAGES = [
   [/^import$/, 'import', () => importPage(main)],
   [/^settings$/, 'settings', () => settingsPage(main)],
 ];
-export function route() {
+export async function route() {
   if (!started) return;
+  if (/^#\/(segments|email)/.test(location.hash)) { try { await loadEvents(); } catch (e) {} }   // (guest lists change in FT Events)
   const path = location.hash.replace(/^#\/?/, '').replace(/\/$/, '');
   document.body.classList.remove('drawer');
   for (const [re, name, draw] of PAGES) { const m = re.exec(path); if (!m) continue;

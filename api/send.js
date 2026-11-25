@@ -56,7 +56,11 @@ module.exports = async (req, res) => {
       const had = new Set((await db(p, `ftc_timeline?kind=eq.email_out&meta->>email_id=eq.${id}&select=person_id`)).map(r => r.person_id));
       const to = people.filter(q => (q.emails || []).length && !had.has(q.id) && (!marketing || (q.email_ok && !q.unsubscribed_at)));
       skipped = ids.length - to.length - had.size;
-      if (!marketing && to.length > DIRECT_MAX) throw new Error(`A direct email goes to ${DIRECT_MAX} people at most. Send this one as Marketing.`);
+      if (!marketing && to.length > DIRECT_MAX) {   // more than that only when it's an event's own list: everyone getting it is on that event
+        const seg = email.segment_id ? (await db(p, `ftc_segments?id=eq.${email.segment_id}&select=rules`))[0] : null, evId = seg && seg.rules && seg.rules.event && seg.rules.event.id;
+        const on = evId && /^[0-9a-f-]{36}$/i.test(evId) ? new Set((await db(p, `ftc_event_people?event_id=eq.${evId}&select=person_id`)).map(r => r.person_id)) : null;
+        if (!on || !to.every(q => on.has(q.id))) throw new Error(`A direct email goes to ${DIRECT_MAX} people at most. Send this one as Marketing.`);
+      }
       const sigs = marketing && to.length ? await rpc('ftc_sigs', { ids: to.map(q => q.id) }, p.token) : {};
       const parts = chunks(to, 100);
       for (let n = 0; n < parts.length; n++) {

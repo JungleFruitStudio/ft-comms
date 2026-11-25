@@ -48,7 +48,8 @@ export function segmentsPage(main) {
 export function segmentPage(main, id) {
   const s = segment(id);
   if (!s) { main.innerHTML = `<a class="backlink" href="#/segments"><i data-ic="back"></i>Segments</a><div class="empty">This segment has been deleted.</div>`; return; }
-  const r = { ...M.emptyRules(), ...(s.rules || {}) }, tags = M.allTags(state.people), sources = [...new Set(state.people.map(p => p.source))].sort();
+  const r = { ...M.emptyRules(), ...(s.rules || {}) }; r.event = { id: '', as: '', status: '', ...(r.event || {}) };
+  const tags = M.allTags(state.people), sources = [...new Set(state.people.map(p => p.source))].sort();
   let t = 0; const save = patch => { clearTimeout(t); t = setTimeout(async () => { try { await update('segments', id, patch || { rules: r }); } catch (er) { toast('Couldn’t save: ' + er.message, 'error'); } }, 350); };
   main.innerHTML = `
     <a class="backlink" href="#/segments"><i data-ic="back"></i>Segments</a>
@@ -56,6 +57,10 @@ export function segmentPage(main, id) {
       <div class="row"><button class="btn" id="mail">Email this segment</button><button class="btn danger" id="del">Delete</button></div></div>
     <div class="two-col even">
       <div class="panel"><h3>Who’s in it</h3><div class="stack">
+        <div class="field"><span>Was at an event</span><div class="grid3"><select class="input" id="evId"><option value="">Any or none</option>${state.events.map(e => `<option value="${e.id}" ${e.id === r.event.id ? 'selected' : ''}>${esc(e.name)}${e.event_date ? ' · ' + esc(e.event_date) : ''}</option>`).join('')}</select>
+          <select class="input" id="evAs"><option value="">Guests and team</option><option value="guest" ${r.event.as === 'guest' ? 'selected' : ''}>Guests</option><option value="team" ${r.event.as === 'team' ? 'selected' : ''}>Team</option></select>
+          <select class="input" id="evSt"><option value="">Any status</option><option value="came" ${r.event.status === 'came' ? 'selected' : ''}>Came</option><option value="booked" ${r.event.status === 'booked' ? 'selected' : ''}>Booked</option><option value="noshow" ${r.event.status === 'noshow' ? 'selected' : ''}>No-show</option><option value="cancel" ${r.event.status === 'cancel' ? 'selected' : ''}>Cancelled</option></select></div>
+          <span class="small muted" style="text-transform:none;letter-spacing:0;font-weight:400">Guest lists and teams come from FT Events and stay up to date. Status applies to guests.</span></div>
         <div class="field"><span>Has any of these tags</span><div id="any"></div></div>
         <div class="field"><span>Has all of these tags</span><div id="all"></div></div>
         <div class="field"><span>Has none of these tags</span><div id="none"></div></div>
@@ -78,6 +83,7 @@ export function segmentPage(main, id) {
   $('#reach', main).onchange = e => { r.reach = e.target.value; changed(); }; $('#consent', main).onchange = e => { r.consent = e.target.value; changed(); };
   $('#quiet', main).oninput = e => { r.quietDays = e.target.value === '' ? '' : Math.max(0, +e.target.value); changed(); }; $('#active', main).oninput = e => { r.activeDays = e.target.value === '' ? '' : Math.max(0, +e.target.value); changed(); };
   $('#source', main).onchange = e => { r.source = e.target.value; changed(); };
+  $('#evId', main).onchange = e => { r.event.id = e.target.value; changed(); }; $('#evAs', main).onchange = e => { r.event.as = e.target.value; changed(); }; $('#evSt', main).onchange = e => { r.event.status = e.target.value; changed(); };
   $('#name', main).onchange = e => save({ name: e.target.value.trim() || 'New segment', rules: r });
   $('#who', main).onclick = e => { const tr = e.target.closest('tr[data-id]'); if (tr) location.hash = '#/p/' + tr.dataset.id; };
   $('#del', main).onclick = async () => { if (!await confirmBox(`Delete the segment “${s.name}”? The people in it stay in the registry.`, 'Delete', true)) return;

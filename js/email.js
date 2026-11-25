@@ -1,7 +1,7 @@
 // Email: the list of drafts and sent emails, and the page where one is written, previewed, tested and sent.
 // Two kinds. Marketing goes to a segment or a picked group, only to people who agreed to it, with an unsubscribe
 // link. Direct is a personal note to a few people (25 at most), with no consent needed and no footer.
-import { state, person, org, segment, emailById, create, update, remove, api, isAdmin, sb } from './db.js';
+import { state, person, org, segment, emailById, eventById, create, update, remove, api, isAdmin, sb } from './db.js';
 import { $, $$, esc, toast, confirmBox, busy } from './ui.js';
 import * as M from './model.js';
 
@@ -52,7 +52,7 @@ export function composePage(main, id) {
       <div class="panel"><div class="stack">
         <div class="field"><span>Kind</span><div><div class="seg" id="kind"><button data-k="marketing" class="${e.kind === 'marketing' ? 'on' : ''}">Marketing</button><button data-k="direct" class="${e.kind === 'direct' ? 'on' : ''}">Direct</button></div>
           <div class="small muted" id="kindNote" style="margin-top:7px"></div></div></div>
-        <label class="field"><span>To</span><select class="input" id="to"><option value="">${(e.to_ids || []).length ? esc(toLabel({ ...e, segment_id: null })) + ' (picked)' : 'Choose a segment'}</option>${state.segments.map(s => `<option value="${s.id}" ${s.id === e.segment_id ? 'selected' : ''}>Segment: ${esc(s.name)}</option>`).join('')}</select></label>
+        <label class="field"><span>To</span><select class="input" id="to"><option value="">${(e.to_ids || []).length ? esc(toLabel({ ...e, segment_id: null })) + ' (picked)' : 'Choose a segment'}</option>${state.segments.map(s => `<option value="${s.id}" ${s.id === e.segment_id ? 'selected' : ''}>Segment: ${esc(s.name)}</option>`).join('')}${state.events.length ? `<optgroup label="From FT Events">${state.events.map(v => `<option value="ev:${v.id}:guest">Guests of ${esc(v.name)}</option><option value="ev:${v.id}:team">Team of ${esc(v.name)}</option>`).join('')}</optgroup>` : ''}</select></label>
         <div class="small muted" id="aud"></div>
         <label class="field"><span>Subject</span><input class="input" id="subj" value="${esc(e.subject)}"></label>
         <label class="field"><span>Message</span><textarea class="input" id="body" rows="14" placeholder="Hi {{first_name}},">${esc(e.body)}</textarea></label>
@@ -62,8 +62,9 @@ export function composePage(main, id) {
       <div class="panel"><h3>Preview</h3><p class="small muted" id="pvNote"></p><div class="preview" id="pv"></div></div>
     </div>`;
   const draw = () => {
-    const a = audience(e), first = a.to[0] || null, over = e.kind === 'direct' && a.to.length > DIRECT_MAX;
-    $('#kindNote', main).textContent = e.kind === 'marketing' ? 'Goes only to people who agreed to marketing email. An unsubscribe link and your postal address are added at the bottom.' : `A personal note to up to ${DIRECT_MAX} people. No footer is added.`;
+    const seg = e.segment_id && segment(e.segment_id), forEvent = !!(seg && seg.rules && seg.rules.event && seg.rules.event.id);
+    const a = audience(e), first = a.to[0] || null, over = e.kind === 'direct' && a.to.length > DIRECT_MAX && !forEvent;
+    $('#kindNote', main).textContent = e.kind === 'marketing' ? 'Goes only to people who agreed to marketing email. An unsubscribe link and your postal address are added at the bottom.' : (forEvent ? 'A note to the people on that event’s list, however many. No footer is added.' : `A personal note to up to ${DIRECT_MAX} people. No footer is added.`);
     $('#aud', main).innerHTML = `<strong>${a.to.length}</strong> ${a.to.length === 1 ? 'person' : 'people'} will get it.` + (a.noConsent ? ` ${a.noConsent} left out: they haven’t agreed to marketing email.` : '') + (a.noEmail ? ` ${a.noEmail} left out: no email address.` : '') + (over ? ` <span style="color:var(--red)">That’s more than ${DIRECT_MAX}; send it as Marketing.</span>` : '');
     $('#pvNote', main).textContent = first ? `As ${M.fullName(first)} will see it. From ${sender.from_name || 'Foreign Tongues'} <${sender.from_email || 'no from address yet'}>.` : 'Pick who it goes to and the preview fills in their name.';
     $('#pv', main).innerHTML = `<p style="font:600 15px var(--f-ui);margin-bottom:16px">${esc(M.fill(e.subject, first)) || '<span class="faint">No subject</span>'}</p>${M.bodyHtml(e.body, first) || '<p class="faint">Nothing written yet.</p>'}${e.kind === 'marketing' ? `<div class="foot">${esc(sender.address || 'Your postal address (add it in Settings)')}<br><u>Unsubscribe</u></div>` : ''}`;
@@ -72,7 +73,14 @@ export function composePage(main, id) {
   };
   draw();
   $$('#kind button', main).forEach(b => b.onclick = () => { $$('#kind button', main).forEach(x => x.classList.toggle('on', x === b)); save({ kind: b.dataset.k }); draw(); });
-  $('#to', main).onchange = ev => { save({ segment_id: ev.target.value || null }); draw(); };
+  // an event's guests or team: a segment for it is made (once) and used, and the email becomes a direct one
+  $('#to', main).onchange = async ev => { const v = ev.target.value, m = /^ev:([\w-]+):(guest|team)$/.exec(v);
+    if (!m) { save({ segment_id: v || null }); draw(); return; }
+    const evn = eventById(m[1]), name = `${m[2] === 'team' ? 'Team' : 'Guests'} of ${evn ? evn.name : 'the event'}`;
+    try { const seg = state.segments.find(s => s.rules && s.rules.event && s.rules.event.id === m[1] && s.rules.event.as === m[2] && !s.rules.event.status && M.describe({ event: s.rules.event }) === M.describe(s.rules))
+        || await create('segments', { name, rules: { ...M.emptyRules(), event: { id: m[1], as: m[2], status: '' } } });
+      clearTimeout(t); Object.assign(e, { segment_id: seg.id, kind: 'direct' }); await update('emails', id, { segment_id: seg.id, kind: 'direct' }); composePage(main, id);
+    } catch (er) { toast('Couldn’t pick that list: ' + er.message, 'error'); } };
   $('#subj', main).oninput = ev => { save({ subject: ev.target.value }); draw(); };
   $('#body', main).oninput = ev => { save({ body: ev.target.value }); draw(); };
   $('#del', main).onclick = async () => { if (!await confirmBox('Delete this draft?', 'Delete', true)) return; clearTimeout(t); try { await remove('emails', id); location.hash = '#/email'; } catch (er) { toast('Couldn’t delete: ' + er.message, 'error'); } };

@@ -5,7 +5,7 @@ const SUPABASE_URL = 'https://ctmvkumkqlspyenbnnkn.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_yyJg7u4i2MMe1Y7mWYVELQ_3MU9zXWo';   // publishable: safe in the page; the database rules limit access
 
 export const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'ftc.auth' } });
-export const state = { me: null, people: [], orgs: [], segments: [], emails: [], settings: {} };
+export const state = { me: null, people: [], orgs: [], segments: [], emails: [], settings: {}, events: [], links: [] };
 const fail = e => { throw new Error((e && e.message) || String(e)); };
 
 /* ---------- who's here ---------- */
@@ -41,7 +41,18 @@ export async function loadAll() {
   const [people, orgs, segments, emails, settings] = await Promise.all([
     all('ftc_people', 'created_at'), all('ftc_orgs', 'name'), all('ftc_segments', 'name'), all('ftc_emails', 'created_at'), all('ftc_settings', 'key')]);
   Object.assign(state, { people, orgs, segments, emails, settings: Object.fromEntries(settings.map(s => [s.key, s.value])) });
+  try { await loadEvents(); } catch (e) {}   // (FT Comms works without FT Events)
 }
+// FT Events' events and who was at each (ftc_event_people: one row per person per list, kept by the database)
+let byPerson = new Map();
+export async function loadEvents() {
+  const [ev, ln] = await Promise.all([sb.from('fte_events').select('id,name,event_date').eq('is_template', false).order('event_date', { ascending: false }), sb.from('ftc_event_people').select('*').limit(10000)]);
+  if (ev.error) fail(ev.error); if (ln.error) fail(ln.error);
+  state.events = ev.data || []; state.links = ln.data || [];
+  byPerson = new Map(); for (const l of state.links) { if (!byPerson.has(l.person_id)) byPerson.set(l.person_id, []); byPerson.get(l.person_id).push(l); }
+}
+export const eventsOf = pid => byPerson.get(pid) || [];
+export const eventById = id => state.events.find(e => e.id === id) || null;
 export const person = id => state.people.find(p => p.id === id) || null;
 export const org = id => state.orgs.find(o => o.id === id) || null;
 export const segment = id => state.segments.find(s => s.id === id) || null;
